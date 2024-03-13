@@ -17,5 +17,6 @@ metadata:
   namespace: csns
 type: Opaque
 data:
-  PASSWORD: cGFzc3dvcmQ= # 'password' base-64 encoded
+  PASSWORD: ZGlmZmVyZW50X3Bhc3N3b3Jk # 'different_password' base-64 encoded
+  # PASSWORD: cGFzc3dvcmQ= # 'password' base-64 encoded
   SUDO_PASSWORD: c3Vkb19wYXNzd29yZA== # 'sudo_password' base-64 encoded
