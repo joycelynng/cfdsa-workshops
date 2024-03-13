@@ -1,0 +1,103 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: csns
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cs-pvc
+  namespace: csns
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: do-block-storage # change to object storage
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cs-deploy
+  namespace: csns
+  labels:
+    app: cs
+    name: cs-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels: # specify pod labels to select
+      app: cs
+      name: cs-po
+  template: # pod template
+    metadata:
+      name: cs-po
+      labels: # pod labels
+        app: cs
+        name: cs-po
+    spec:
+      volumes:  
+      - name: cs-volume
+        persistentVolumeClaim:
+          claimName: cs-pvc
+      containers:
+      - name: cs-container
+        image: linuxserver/code-server:latest
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - secretRef:
+            name: cs-secret
+        - configMapRef:
+            name: cs-cm
+        ports:
+        - name: cs-port
+          containerPort: 8443
+        volumeMounts:  
+        - name: cs-volume 
+          mountPath: /path/to/appdata/config:/config
+          
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cs-svc
+  namespace: csns
+  labels:
+    app: cs
+    name: cs-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: cs
+    name: cs-po
+  ports:
+  - name: cs-svc-port
+    port: 8443
+    targetPort: cs-port
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cs-ing
+  namespace: csns # must be same namespace as service
+  labels:
+    app: cs
+    name: cs-ing
+spec:
+  ingressClassName: nginx # kubectl get ingressclass
+  rules:
+  - host: cs-163.47.11.104.nip.io # kubectl get all -ningress-nginx to get exteneral IP of nginx load balancer
+    http:
+      paths:
+      - path: / 
+        pathType: Prefix
+        backend:
+          service:
+            name: cs-svc
+            port: 
+              name: cs-svc-port

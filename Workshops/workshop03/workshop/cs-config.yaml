@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cs-cm
+  namespace: csns
+data:
+  PUID: '1000'
+  PGID: '1000'
+  TZ: 'Etc/UTC'
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cs-secret
+  namespace: csns
+type: Opaque
+data:
+  PASSWORD: cGFzc3dvcmQ= # 'password' base-64 encoded
+  SUDO_PASSWORD: c3Vkb19wYXNzd29yZA== # 'sudo_password' base-64 encoded
