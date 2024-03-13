@@ -58,7 +58,7 @@ spec:
           containerPort: 8443
         volumeMounts:  
         - name: cs-volume 
-          mountPath: /path/to/appdata/config:/config
+          mountPath: /config/workspace
           
 ---
 apiVersion: v1

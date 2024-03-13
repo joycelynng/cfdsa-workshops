@@ -7,7 +7,10 @@ metadata:
 data:
   PUID: '1000'
   PGID: '1000'
-  TZ: 'Etc/UTC'
+  TZ: Asia/Singapore
+  PROXY_DOMAIN: cs-163.47.11.104.nip.io
+  DEFAULT_WORKSPACE: /config/workspace
+
 
 ---
 apiVersion: v1
