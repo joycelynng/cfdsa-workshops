@@ -1,0 +1,307 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Namespace","metadata":{"annotations":{},"labels":{"dept":"eng","env":"test"},"name":"mynstest"}}
+    creationTimestamp: "2024-03-14T02:48:57Z"
+    labels:
+      dept: eng
+      env: test
+      kubernetes.io/metadata.name: mynstest
+    name: mynstest
+    resourceVersion: "637110"
+    uid: dab9919c-d466-4300-97da-b6ce6f35a117
+  spec:
+    finalizers:
+    - kubernetes
+  status:
+    phase: Active
+- apiVersion: v1
+  data:
+    INSTANCE_NAME: this is from kustomization
+  kind: ConfigMap
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","data":{"INSTANCE_NAME":"this is from kustomization"},"kind":"ConfigMap","metadata":{"annotations":{},"labels":{"dept":"eng","env":"test"},"name":"test-dov-cm","namespace":"mynstest"}}
+    creationTimestamp: "2024-03-14T02:48:57Z"
+    labels:
+      dept: eng
+      env: test
+    name: test-dov-cm
+    namespace: mynstest
+    resourceVersion: "640928"
+    uid: b73385cc-6162-48e9-a1fc-b44a7647cabd
+- apiVersion: v1
+  data:
+    INSTANCE_NAME: bmFtZSBmcm9tIGNvbmZpZ21hcA==
+  kind: Secret
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","data":{"INSTANCE_NAME":"bmFtZSBmcm9tIGNvbmZpZ21hcA=="},"kind":"Secret","metadata":{"annotations":{},"labels":{"dept":"eng","env":"test"},"name":"test-dov-secret","namespace":"mynstest"},"type":"Opaque"}
+    creationTimestamp: "2024-03-14T02:48:57Z"
+    labels:
+      dept: eng
+      env: test
+    name: test-dov-secret
+    namespace: mynstest
+    resourceVersion: "637114"
+    uid: 0b69e635-072d-43a8-8fe3-2fb0b3934e1c
+  type: Opaque
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"dov","dept":"eng","env":"test","name":"dov-svc"},"name":"test-dov-svc","namespace":"mynstest"},"spec":{"ports":[{"name":"svc-web-port","port":5000,"targetPort":"web-port"},{"name":"svc-metrics-port","port":5100,"targetPort":"metrics-port"}],"selector":{"app":"dov","dept":"eng","env":"test","name":"dov-po"},"type":"ClusterIP"}}
+    creationTimestamp: "2024-03-14T02:48:58Z"
+    labels:
+      app: dov
+      dept: eng
+      env: test
+      name: dov-svc
+    name: test-dov-svc
+    namespace: mynstest
+    resourceVersion: "637116"
+    uid: edc20e69-2dc9-49eb-8d21-ce4431fad677
+  spec:
+    clusterIP: 10.245.196.170
+    clusterIPs:
+    - 10.245.196.170
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: svc-web-port
+      port: 5000
+      protocol: TCP
+      targetPort: web-port
+    - name: svc-metrics-port
+      port: 5100
+      protocol: TCP
+      targetPort: metrics-port
+    selector:
+      app: dov
+      dept: eng
+      env: test
+      name: dov-po
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"dov","dept":"eng","env":"test","name":"dov-deploy"},"name":"test-dov-deploy","namespace":"mynstest"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"dov","dept":"eng","env":"test","name":"dov-po"}},"template":{"metadata":{"labels":{"app":"dov","dept":"eng","env":"test","name":"dov-po"},"name":"dov-po"},"spec":{"":null,"containers":[{"env":[{"name":"INSTANCE_HASH","valueFrom":{"fieldRef":{"fieldPath":"status.podIP"}}}],"envFrom":[{"configMapRef":{"name":"test-dov-cm"}}],"image":"chukmunnlee/dov-bear:v5","imagePullPolicy":"IfNotPresent","livenessProbe":{"httpGet":{"path":"/healthz","port":"web-port"},"initialDelaySeconds":5,"periodSeconds":30},"name":"dov-container","ports":[{"containerPort":3000,"name":"web-port"},{"containerPort":3100,"name":"metrics-port"}],"resources":{"limits":{"cpu":"128m","memory":"96Mi"},"requests":{"cpu":"64m","memory":"48Mi"}}}]}}}}
+    creationTimestamp: "2024-03-14T02:48:58Z"
+    generation: 11
+    labels:
+      app: dov
+      dept: eng
+      env: test
+      name: dov-deploy
+    name: test-dov-deploy
+    namespace: mynstest
+    resourceVersion: "645678"
+    uid: cd657833-2957-47a2-a8ce-16ca7da04391
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 4
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: dov
+        dept: eng
+        env: test
+        name: dov-po
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: dov
+          dept: eng
+          env: test
+          name: dov-po
+        name: dov-po
+      spec:
+        containers:
+        - env:
+          - name: INSTANCE_HASH
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          envFrom:
+          - configMapRef:
+              name: test-dov-cm
+          image: chukmunnlee/dov-bear:v5
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: web-port
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: dov-container
+          ports:
+          - containerPort: 3000
+            name: web-port
+            protocol: TCP
+          - containerPort: 3100
+            name: metrics-port
+            protocol: TCP
+          resources:
+            limits:
+              cpu: 128m
+              memory: 96Mi
+            requests:
+              cpu: 64m
+              memory: 48Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 4
+    conditions:
+    - lastTransitionTime: "2024-03-14T02:48:58Z"
+      lastUpdateTime: "2024-03-14T02:48:59Z"
+      message: ReplicaSet "test-dov-deploy-56fff786f8" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2024-03-14T03:24:48Z"
+      lastUpdateTime: "2024-03-14T03:24:48Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 11
+    readyReplicas: 4
+    replicas: 4
+    updatedReplicas: 4
+- apiVersion: autoscaling/v2
+  kind: HorizontalPodAutoscaler
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"autoscaling/v2","kind":"HorizontalPodAutoscaler","metadata":{"annotations":{},"labels":{"dept":"eng","env":"test"},"name":"test-dov-hpa","namespace":"mynstest"},"spec":{"maxReplicas":4,"metrics":[{"resource":{"name":"cpu","target":{"averageUtilization":50,"type":"Utilization"}},"type":"Resource"},{"resource":{"name":"memory","target":{"averageUtilization":50,"type":"Utilization"}},"type":"Resource"}],"minReplicas":1,"scaleTargetRef":{"apiVersion":"apps/v1","kind":"Deployment","name":"test-dov-deploy"}}}
+    creationTimestamp: "2024-03-14T02:48:58Z"
+    labels:
+      dept: eng
+      env: test
+    name: test-dov-hpa
+    namespace: mynstest
+    resourceVersion: "646325"
+    uid: 35784ea1-f57c-4058-96ca-2f548f17cee2
+  spec:
+    maxReplicas: 4
+    metrics:
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: 50
+          type: Utilization
+      type: Resource
+    - resource:
+        name: memory
+        target:
+          averageUtilization: 50
+          type: Utilization
+      type: Resource
+    minReplicas: 1
+    scaleTargetRef:
+      apiVersion: apps/v1
+      kind: Deployment
+      name: test-dov-deploy
+  status:
+    conditions:
+    - lastTransitionTime: "2024-03-14T02:49:13Z"
+      message: recent recommendations were higher than current one, applying the highest
+        recent recommendation
+      reason: ScaleDownStabilized
+      status: "True"
+      type: AbleToScale
+    - lastTransitionTime: "2024-03-14T03:24:47Z"
+      message: the HPA was able to successfully calculate a replica count from memory
+        resource utilization (percentage of request)
+      reason: ValidMetricFound
+      status: "True"
+      type: ScalingActive
+    - lastTransitionTime: "2024-03-14T02:50:28Z"
+      message: the desired replica count is more than the maximum replica count
+      reason: TooManyReplicas
+      status: "True"
+      type: ScalingLimited
+    currentMetrics:
+    - resource:
+        current:
+          averageUtilization: 0
+          averageValue: "0"
+        name: cpu
+      type: Resource
+    - resource:
+        current:
+          averageUtilization: 63
+          averageValue: "31804416"
+        name: memory
+      type: Resource
+    currentReplicas: 4
+    desiredReplicas: 4
+    lastScaleTime: "2024-03-14T03:24:47Z"
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{},"labels":{"app":"dov","dept":"eng","env":"test","name":"dov-ing"},"name":"test-dov-ing","namespace":"mynstest"},"spec":{"ingressClassName":"nginx","rules":[{"host":"kustomize-163.47.11.104.nip.io","http":{"paths":[{"backend":{"service":{"name":"test-dov-svc","port":{"name":"svc-web-port"}}},"path":"/","pathType":"Prefix"}]}}]}}
+    creationTimestamp: "2024-03-14T03:21:19Z"
+    generation: 1
+    labels:
+      app: dov
+      dept: eng
+      env: test
+      name: dov-ing
+    name: test-dov-ing
+    namespace: mynstest
+    resourceVersion: "644935"
+    uid: a938f542-6e1c-49a2-838a-d403a425eefe
+  spec:
+    ingressClassName: nginx
+    rules:
+    - host: kustomize-163.47.11.104.nip.io
+      http:
+        paths:
+        - backend:
+            service:
+              name: test-dov-svc
+              port:
+                name: svc-web-port
+          path: /
+          pathType: Prefix
+  status:
+    loadBalancer:
+      ingress:
+      - ip: 163.47.11.104
+kind: List
+metadata: {}

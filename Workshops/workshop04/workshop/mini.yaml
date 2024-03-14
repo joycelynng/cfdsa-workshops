@@ -1,0 +1,214 @@
+# headless service for stateful set
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mini-hsvc
+  namespace: minins
+  labels:
+    app: mini
+    name: mini-hsvc
+spec:
+  # type: ClusterIP
+  clusterIP: None
+  selector:
+    app: mini
+    name: mini-po
+  ports:
+  - name: mini-hsvc-port-d
+    port: 9000
+    targetPort: data-port
+  - name: mini-hsvc-port-w
+    port: 9090
+    targetPort: web-port
+
+# headful service for ingress
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mini-svc
+  namespace: minins
+  labels:
+    app: mini
+    name: mini-svc
+spec:
+  type: ClusterIP
+  # clusterIP: None
+  selector:
+    app: mini
+    name: mini-po
+  ports:
+  - name: mini-svc-port-d
+    port: 9000
+    targetPort: data-port
+  - name: mini-svc-port-w
+    port: 9090
+    targetPort: web-port
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mini-sts
+  namespace: minins
+  labels:
+    app: mini
+    name: mini-sts
+spec:
+  replicas: 4
+  serviceName: mini-svc
+  selector:
+    matchLabels: # specify pod labels to match for identification/ debugging
+      app: mini
+      name: mini-po
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: data-volume
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: do-block-storage
+  template: # pod template
+    metadata:
+      name: mini-po
+      labels: # pod labels
+        app: mini
+        name: mini-po
+    spec:
+      volumes: 
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: mini-pvc
+      initContainers:
+      - name: mini-init
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        command:
+        - bin/sh
+        - -c
+        - "chown 1001:1001 /data" # change file owner and group of /data to user 1001 and group 1001
+        volumeMounts:
+        - name: data-volume 
+          mountPath: /data 
+      containers:
+      - name: mini-container
+        image: bitnami/minio:2023.12.23
+        imagePullPolicy: IfNotPresent
+        command: # exec form (run minio in container)
+        - minio
+        - server
+        - --address=:9000
+        - --console-address=:9090
+        - mini-sts-{0...3}.mini-svc.minins.svc.cluster.local/data
+        # command: # shell form (start shell in container, then run minio)
+        # - /bin/sh
+        # - -c
+        # - "minio server --address=:9000 --console-address=:9090 mini-sts-{0...3}.mini-svc.minins.svc.cluster.local/data"
+        envFrom:
+        - configMapRef:
+            name: mini-cm
+        - secretRef:
+            name: mini-secret
+        ports:
+        - name: data-port
+          containerPort: 9000
+        - name: web-port
+          containerPort: 9090
+        volumeMounts:
+        - name: data-volume 
+          mountPath: /data
+        readinessProbe:
+          httpGet:
+            path: /minio/health/ready
+            port: 9000
+          periodSeconds: 30
+          initialDelaySeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          periodSeconds: 30
+          initialDelaySeconds: 5
+        resources:
+          requests:
+            cpu: 200m # guaranteed minimum
+            memory: 250Mi # guaranteed minimum
+          limits:
+            cpu: 200m # maximum
+            memory: 250Mi # maximums
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mini-hpa
+  namespace: minins
+spec:
+  minReplicas: 4
+  maxReplicas: 8
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet # can only scale deployment, replica set or stateful set, cannot scale pod
+    name: mini-sts
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 90 # percentage
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 90 # percentage
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mini-ing
+  namespace: minins # must be same namespace as service
+  labels:
+    app: mini
+    name: mini-ing
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "5"
+    nginx.ingress.kubernetes.io/limit-rpm: "300"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx # kubectl get ingressclass
+  rules:
+  - host: data-163.47.11.104.nip.io # kubectl get all -ningress-nginx, get external IP of ingress
+    http:
+      paths:
+      - path: / 
+        pathType: Prefix
+        backend:
+          service:
+            name: mini-svc
+            port: 
+              name: mini-svc-port-d
+  - host: console-163.47.11.104.nip.io
+    http:
+      paths:
+      - path: / 
+        pathType: Prefix
+        backend:
+          service:
+            name: mini-svc
+            port: 
+              name: mini-svc-port-w
+
+# Name:	mini-svc.minins.svc.cluster.local
+# Address: 10.244.1.105
+# Address: 10.244.0.186
+# Address: 10.244.0.94
+# Address: 10.244.0.84

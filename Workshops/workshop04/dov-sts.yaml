@@ -1,0 +1,75 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dov-hsvc
+  namespace: myns
+  labels:
+    app: dov
+    name: dov-hsvc
+spec:
+  # type: ClusterIP
+  clusterIP: None
+  selector:
+    app: dov
+    name: dov-po
+  ports:
+  - name: svc-web-port # service web port (svc-web-port 5000) bound to pod web port (web-port)
+    port: 5000
+    targetPort: web-port
+  - name: svc-metrics-port
+    port: 5100
+    targetPort: metrics-port
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dov-sts
+  namespace: myns
+spec:
+  replicas: 3
+  serviceName: dov-hsvc
+  selector:
+    matchLabels: # specify pod labels to match for identification/ debugging
+      app: dov
+      name: dov-po
+  template: # pod template
+    metadata:
+      name: dov-po
+      labels: # pod labels
+        app: dov
+        name: dov-po
+    spec:
+      containers:
+      - name: dov-container
+        image: chukmunnlee/dov-bear:v5
+        imagePullPolicy: IfNotPresent
+        env: # environment variables
+        # - name: INSTANCE_NAME
+        #   value: dov pod
+        - name: INSTANCE_HASH
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP # metadata.labels['app']
+        envFrom:
+        - configMapRef:
+            name: dov-cm
+        ports:
+        - name: web-port
+          containerPort: 3000
+        - name: metrics-port
+          containerPort: 3100
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: web-port
+          periodSeconds: 30
+          initialDelaySeconds: 5
+        resources:
+          requests:
+            cpu: 64m # guaranteed minimum
+            memory: 48Mi # guaranteed minimum
+          limits:
+            cpu: 128m # maximum
+            memory: 96Mi # maximums
